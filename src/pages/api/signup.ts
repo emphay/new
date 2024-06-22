@@ -26,8 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
     })
 
-    res.status(201).json({ success: true })
-    //res.redirect('/signin');
+    res.redirect('/signin');
 
 }
 

@@ -22,28 +22,33 @@ export const authOptions = {
         },
         async authorize(credentials, req) {
             if (credentials) {
-                bcrypt.hash(credentials.password, 10, async (err: any, hash: any) => {
-                    if (err) {
+
+                const userWithPassword = await prisma.user.findUnique({
+                    select: {
+                        id: true,
+                        email: true,
+                        password: true,
+                    },
+                    where: {
+                        username: credentials.username
+                    }
+                })
+                if (userWithPassword) {
+                    const compareResult = bcrypt.compareSync(credentials.password, userWithPassword.password);
+                    if (compareResult) {
+                        console.log('Passwords match! User authenticated.',);
+                        return {
+                            id: userWithPassword.id,
+                            username: credentials?.username,
+                            name: credentials?.username,
+                            email: userWithPassword.email
+                        }
+                    } else {
+                        console.log('Passwords do not match! Authentication failed.');
                         return null;
                     }
-                    const dbUser = await prisma.user.findUnique({
-                        where: {
-                            username: credentials?.username,
-                            password: hash
-                        }, select: {
-                            email: true,
-                            id: true,
-                        }
-                    })
-                    if (dbUser) {
-                        return {
-                            id: dbUser.id,
-                            name: credentials?.username,
-                            email: dbUser.email
-                        }
-                    } else return null;
-                })
 
+                } else return null;
             } else return null;
         }
     })],
