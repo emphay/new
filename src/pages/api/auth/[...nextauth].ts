@@ -1,65 +1,82 @@
-import NextAuth from "next-auth"
+import NextAuth from "next-auth";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client"
-import CredentialsProvider from "next-auth/providers/credentials"
+import { PrismaClient } from "@prisma/client";
+import CredentialsProvider from "next-auth/providers/credentials";
 //@ts-ignore
 import bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 export const authOptions = {
     adapter: PrismaAdapter(prisma),
-    // Configure one or more authentication providers
     providers: [CredentialsProvider({
-        // The name to display on the sign in form (e.g. 'Sign in with...')
-        // id: "email-auth",
         name: 'Credentials',
-        // type: 'credentials',
-
-        // You can pass any HTML attribute to the <input> tag through the object.
         credentials: {
             username: { label: "Username", type: "text", placeholder: "jsmith" },
             password: { label: "Password", type: "password" }
         },
         async authorize(credentials, req) {
             if (credentials) {
-
                 const userWithPassword = await prisma.user.findUnique({
                     select: {
                         id: true,
+                        FirstName: true,
+                        LastName: true,
                         email: true,
-                        password: true,
+                        password: true
                     },
                     where: {
                         username: credentials.username
                     }
-                })
+                });
                 if (userWithPassword) {
                     const compareResult = bcrypt.compareSync(credentials.password, userWithPassword.password);
                     if (compareResult) {
-                        console.log('Passwords match! User authenticated.',);
+                        console.log('Passwords match! User authenticated.');
                         return {
                             id: userWithPassword.id,
                             username: credentials?.username,
-                            name: credentials?.username,
+                            FirstName: userWithPassword.FirstName,
+                            LastName: userWithPassword.LastName,
                             email: userWithPassword.email
-                        }
+                        };
                     } else {
                         console.log('Passwords do not match! Authentication failed.');
                         return null;
                     }
-
-                } else return null;
-            } else return null;
+                } else {
+                    return null;
+                }
+            } else {
+                return null;
+            }
         }
     })],
     session: {
         strategy: "jwt",
+    },
+    callbacks: {
+        async jwt({ token, user }) {
+            if (user) {
+                token.FirstName = user.FirstName;
+                token.LastName = user.LastName;
+            }
+            return token;
+        },
+        async session({ session, token }) {
+         
+            if (token) {
+                session.id = token.sub;
+                session.user.FirstName = token.FirstName;
+                session.user.LastName = token.LastName;
+            }
+            return session;
+        }
     },
     secret: process.env.NEXTAUTH_SECRET,
     debug: true,
     pages: {
         signIn: "/signin",
     }
-}
+};
 
-export default NextAuth(authOptions)
+export default NextAuth(authOptions);

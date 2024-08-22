@@ -18,7 +18,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     bcrypt.hash(password, saltRounds, async (err: any, hash: any) => {
         await prisma.user.create({
             data: {
-                name: username,
+                FirstName: username,
+                LastName: username,
                 username: username,
                 email: email,
                 password: hash
